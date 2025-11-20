@@ -25,6 +25,8 @@ enum ZoomLevel : byte {
 	ZOOM_LVL_OUT_8X,     ///< Zoomed 8 times out.
 	ZOOM_LVL_OUT_16X,    ///< Zoomed 16 times out.
 	ZOOM_LVL_OUT_32X,    ///< Zoomed 32 times out.
+	ZOOM_LVL_OUT_64X,    ///< Zoomed 64 times out.
+	ZOOM_LVL_OUT_128X,   ///< Zoomed 128 times out.
 	ZOOM_LVL_END,        ///< End for iteration.
 
 	/* Here we define in which zoom viewports are */
@@ -41,7 +43,7 @@ enum ZoomLevel : byte {
 	ZOOM_LVL_DETAIL   = ZOOM_LVL_OUT_8X, ///< All zoomlevels below or equal to this, will result in details on the screen, like road-work, ...
 
 	ZOOM_LVL_MIN      = ZOOM_LVL_NORMAL, ///< Minimum zoom level.
-	ZOOM_LVL_MAX      = ZOOM_LVL_OUT_32X, ///< Maximum zoom level.
+	ZOOM_LVL_MAX      = ZOOM_LVL_OUT_128X, ///< Maximum zoom level.
 
 };
 DECLARE_POSTFIX_INCREMENT(ZoomLevel)

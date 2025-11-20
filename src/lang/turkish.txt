@@ -2005,6 +2005,10 @@ STR_CONFIG_SETTING_ZOOM_LVL_NORMAL                              :Normal
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_2X                              :2x
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_4X                              :4x
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_8X                              :8x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_16X                             :16x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_32X                             :32x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_64X                             :64x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_128X                            :128x
 
 STR_CONFIG_SETTING_SPRITE_ZOOM_MIN                              :Kullanılacak en yüksek çözünürlüklü sprite'lar: {STRING}
 STR_CONFIG_SETTING_SPRITE_ZOOM_MIN_HELPTEXT                     :Sprite'lar için kullanılacak maksimum çözünürlüğü sınırlar. Sprite çözünürlüğünü sınırlamak, mevcut olunca bile yüksek çözünürlüklü grafikleri kullanmaktan kaçınacaktır. Bu, yüksek çözünürlüklü grafikleri içeren ve içermeyen GRF dosyalarının bir karşımı kullanılırken oyun görünümünü bir arada tutmaya yardımcı olabilir.

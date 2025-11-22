@@ -342,6 +342,8 @@ enum Commands : uint16_t {
 	CMD_REMOVE_ALL_VEHICLES_GROUP,    ///< remove all vehicles from a group
 	CMD_SET_GROUP_FLAG,               ///< set/clear a flag for a group
 	CMD_SET_GROUP_LIVERY,             ///< set the livery for a group
+	CMD_AUTO_GROUP,                   ///< automatically group vehicles based on criteria
+	CMD_DELETE_AUTO_GROUP,			  ///< delete all auto groups of a vehicle type
 
 	CMD_MOVE_ORDER,                   ///< move an order
 	CMD_CHANGE_TIMETABLE,             ///< change the timetable for a vehicle

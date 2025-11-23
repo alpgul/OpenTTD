@@ -33,9 +33,6 @@ CommandCost CmdAddSharedVehicleGroup(DoCommandFlag flags, GroupID id_g, VehicleT
 CommandCost CmdRemoveAllVehiclesGroup(DoCommandFlag flags, GroupID group_id);
 CommandCost CmdSetGroupFlag(DoCommandFlag flags, GroupID group_id, GroupFlags flag, bool value, bool recursive);
 CommandCost CmdSetGroupLivery(DoCommandFlag flags, GroupID group_id, bool primary, Colours colour);
-CommandCost CmdAutoGroup(DoCommandFlag flags, VehicleType vt, GroupID parent_group);
-CommandCost CmdDeleteAutoGroup(DoCommandFlag flags, VehicleType vt, GroupID group_id);
-
 
 DEF_CMD_TRAIT(CMD_CREATE_GROUP,              CmdCreateGroup,            0, CMDT_ROUTE_MANAGEMENT)
 DEF_CMD_TRAIT(CMD_DELETE_GROUP,              CmdDeleteGroup,            0, CMDT_ROUTE_MANAGEMENT)
@@ -45,11 +42,8 @@ DEF_CMD_TRAIT(CMD_ADD_SHARED_VEHICLE_GROUP,  CmdAddSharedVehicleGroup,  0, CMDT_
 DEF_CMD_TRAIT(CMD_REMOVE_ALL_VEHICLES_GROUP, CmdRemoveAllVehiclesGroup, 0, CMDT_ROUTE_MANAGEMENT)
 DEF_CMD_TRAIT(CMD_SET_GROUP_FLAG,            CmdSetGroupFlag,           0, CMDT_ROUTE_MANAGEMENT)
 DEF_CMD_TRAIT(CMD_SET_GROUP_LIVERY,          CmdSetGroupLivery,         0, CMDT_ROUTE_MANAGEMENT)
-DEF_CMD_TRAIT(CMD_AUTO_GROUP,                CmdAutoGroup,              0, CMDT_ROUTE_MANAGEMENT)
-DEF_CMD_TRAIT(CMD_DELETE_AUTO_GROUP,         CmdDeleteAutoGroup,        0, CMDT_ROUTE_MANAGEMENT)
 
 void CcCreateGroup(Commands cmd, const CommandCost &result, GroupID new_group, VehicleType vt, GroupID parent_group);
-void CcAutoGroup(Commands cmd, const CommandCost &result, VehicleType vt, GroupID parent_group);
 void CcAddVehicleNewGroup(Commands cmd, const CommandCost &result, GroupID new_group, GroupID, VehicleID veh_id, bool, const VehicleListIdentifier &);
 
 #endif /* GROUP_CMD_H */

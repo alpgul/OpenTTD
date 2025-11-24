@@ -224,6 +224,7 @@ void UpdateAllVirtCoords()
 	UpdateAllStationVirtCoords();
 	UpdateAllSignVirtCoords();
 	UpdateAllTownVirtCoords();
+	UpdateAllIndustryVirtCoords();
 	UpdateAllTextEffectVirtCoords();
 	RebuildViewportKdtree();
 }

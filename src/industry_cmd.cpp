@@ -12,7 +12,9 @@
 #include "industry.h"
 #include "station_base.h"
 #include "landscape.h"
+#include "strings_func.h"
 #include "viewport_func.h"
+#include "viewport_kdtree.h"
 #include "command_func.h"
 #include "town.h"
 #include "news_func.h"
@@ -211,6 +213,39 @@ void Industry::PostDestructor(size_t)
 {
 	InvalidateWindowData(WC_INDUSTRY_DIRECTORY, 0, IDIWD_FORCE_REBUILD);
 	SetWindowDirty(WC_BUILD_INDUSTRY, 0);
+}
+
+/** Resize the sign (label) of the industry. */
+void Industry::UpdateVirtCoord()
+{
+	Point pt = RemapCoords2(TileX(this->location.tile) * TILE_SIZE, TileY(this->location.tile) * TILE_SIZE);
+
+	if (this->sign.kdtree_valid) _viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeIndustry(this->index));
+
+	uint16_t total_production = 0;
+	for (const auto &p : this->produced) {
+		if (!IsValidCargoID(p.cargo)) continue;
+		total_production += p.history[LAST_MONTH].production;
+	}
+	if(total_production > 0)
+	{
+		SetDParam(0,total_production);
+		SetDParam(1, this->index);
+		this->sign.UpdatePosition(pt.x, pt.y - 24 * ZOOM_LVL_BASE,
+			STR_VIEWPORT_INDUSTRY,
+			STR_VIEWPORT_INDUSTRY_TINY_WHITE);
+		_viewport_sign_kdtree.Insert(ViewportSignKdtreeItem::MakeIndustry(this->index));
+	}
+
+	SetWindowDirty(WC_INDUSTRY_VIEW, this->index);
+}
+
+/** Update the virtual coords needed to draw the industry sign for all industries. */
+void UpdateAllIndustryVirtCoords()
+{
+	for (Industry *i : Industry::Iterate()) {
+		i->UpdateVirtCoord();
+	}
 }
 
 
@@ -1960,6 +1995,8 @@ static void DoCreateNewIndustry(Industry *i, TileIndex tile, IndustryType type, 
 	}
 	InvalidateWindowData(WC_INDUSTRY_DIRECTORY, 0, IDIWD_FORCE_REBUILD);
 	SetWindowDirty(WC_BUILD_INDUSTRY, 0);
+
+	i->UpdateVirtCoord();
 
 	if (!_generating_world) PopulateStationsNearby(i);
 }

@@ -5806,6 +5806,10 @@ STR_VIEWPORT_STATION_TINY                                       :{TINY_FONT}{STA
 STR_VIEWPORT_WAYPOINT                                           :{WAYPOINT}
 STR_VIEWPORT_WAYPOINT_TINY                                      :{TINY_FONT}{WAYPOINT}
 
+STR_VIEWPORT_INDUSTRY                                           :{YELLOW}[{COMMA}] {INDUSTRY}
+STR_VIEWPORT_INDUSTRY_TINY_BLACK                                :{TINY_FONT}{BLACK}[{COMMA}] {INDUSTRY}
+STR_VIEWPORT_INDUSTRY_TINY_WHITE                                :{TINY_FONT}{YELLOW}[{COMMA}] {INDUSTRY}
+
 # Simple strings to get specific types of data
 STR_COMPANY_NAME                                                :{COMPANY}
 STR_COMPANY_NAME_COMPANY_NUM                                    :{COMPANY} {COMPANY_NUM}

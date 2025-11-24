@@ -200,7 +200,8 @@ static void StationsWndShowStationRating(int left, int right, int y, CargoID typ
 		}
 	}
 
-	DrawString(left + padding, right, y, cs->abbrev, tc, SA_CENTER, false, FS_SMALL);
+	std::string rating_str = fmt::format("{}[{}]", GetString(cs->abbrev), rating * 100 / 255);
+	DrawString(left + padding, right, y, rating_str, tc, SA_CENTER, false, FS_NORMAL);
 
 	/* Draw green/red ratings bar (fits under the waiting bar) */
 	y += height + padding + 1;
@@ -429,10 +430,10 @@ public:
 				/* Determine appropriate width for mini station rating graph */
 				this->rating_width = 0;
 				for (const CargoSpec *cs : _sorted_standard_cargo_specs) {
-					this->rating_width = std::max(this->rating_width, GetStringBoundingBox(cs->abbrev, FS_SMALL).width);
+					this->rating_width = std::max(this->rating_width, GetStringBoundingBox(cs->abbrev, FS_NORMAL).width);
 				}
-				/* Approximately match original 16 pixel wide rating bars by multiplying string width by 1.6 */
-				this->rating_width = this->rating_width * 16 / 10;
+				/* Add space for the rating percentage */
+				this->rating_width += GetStringBoundingBox("[100]", FS_NORMAL).width;
 				break;
 		}
 	}

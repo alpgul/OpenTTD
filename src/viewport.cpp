@@ -70,6 +70,7 @@
 #include "town.h"
 #include "signs_base.h"
 #include "signs_func.h"
+#include "industry.h"
 #include "vehicle_base.h"
 #include "vehicle_gui.h"
 #include "blitter/factory.hpp"
@@ -93,6 +94,7 @@
 #include "viewport_cmd.h"
 
 #include <bit>
+#include <cstdint>
 #include <forward_list>
 #include <stack>
 
@@ -1183,7 +1185,7 @@ static void DrawTileSelection(const TileInfo *ti)
 		case HT_RAIL:
 			if (ti->tile == TileVirtXY(_thd.pos.x, _thd.pos.y)) {
 				assert((_thd.drawstyle & HT_DIR_MASK) < HT_DIR_END);
-				DrawAutorailSelection(ti, _thd.drawstyle & HT_DIR_MASK);	
+				DrawAutorailSelection(ti, _thd.drawstyle & HT_DIR_MASK);
 			}
 
 			break;
@@ -1198,7 +1200,7 @@ static void DrawTileSelection(const TileInfo *ti)
 			}
 			break;
 		}
-		
+
 	}
 }
 
@@ -1396,11 +1398,13 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 	bool show_towns = HasBit(_display_opt, DO_SHOW_TOWN_NAMES) && _game_mode != GM_MENU;
 	bool show_signs = HasBit(_display_opt, DO_SHOW_SIGNS) && !IsInvisibilitySet(TO_SIGNS);
 	bool show_competitors = HasBit(_display_opt, DO_SHOW_COMPETITOR_SIGNS);
+	bool show_industries = _game_mode != GM_MENU;  // Always show industry names (except in menu)
 
 	/* Collect all the items first and draw afterwards, to ensure layering */
 	std::vector<const BaseStation *> stations;
 	std::vector<const Town *> towns;
 	std::vector<const Sign *> signs;
+	std::vector<const Industry *> industries;
 
 	_viewport_sign_kdtree.FindContained(search_rect.left, search_rect.top, search_rect.right, search_rect.bottom, [&](const ViewportSignKdtreeItem & item) {
 		switch (item.type) {
@@ -1444,19 +1448,40 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 				break;
 			}
 
+			case ViewportSignKdtreeItem::VKI_INDUSTRY:
+				if (!show_industries) break;
+				industries.push_back(Industry::Get(item.id.industry));
+				break;
+
 			default:
 				NOT_REACHED();
 		}
 	});
 
-	/* Layering order (bottom to top): Town names, signs, stations */
+	/* Layering order (bottom to top): Town names, industry names, signs, stations */
 
 	for (const auto *t : towns) {
 		SetDParam(0, t->index);
 		SetDParam(1, t->cache.population);
-		ViewportAddString(dpi, ZOOM_LVL_OUT_16X, &t->cache.sign,
+		ViewportAddString(dpi, ZOOM_LVL_OUT_128X, &t->cache.sign,
 			_settings_client.gui.population_in_label ? STR_VIEWPORT_TOWN_POP : STR_VIEWPORT_TOWN,
 			STR_VIEWPORT_TOWN_TINY_WHITE, STR_VIEWPORT_TOWN_TINY_BLACK);
+	}
+
+	for (const auto *ind : industries) {
+		uint16_t total_production = 0;
+		for (const auto &p : ind->produced) {
+			if (!IsValidCargoID(p.cargo)) continue;
+			total_production += p.history[LAST_MONTH].production;
+		}
+		if(total_production > 0)
+		{
+			SetDParam(0, total_production);
+			SetDParam(1, ind->index);
+			ViewportAddString(dpi, ZOOM_LVL_OUT_16X, &ind->sign,
+				STR_VIEWPORT_INDUSTRY,
+				STR_VIEWPORT_INDUSTRY_TINY_WHITE, STR_VIEWPORT_INDUSTRY_TINY_BLACK);
+		}
 	}
 
 	/* Do not draw signs nor station names if they are set invisible */
@@ -2257,11 +2282,13 @@ static bool CheckClickOnViewportSign(const Viewport *vp, int x, int y)
 	bool show_towns = HasBit(_display_opt, DO_SHOW_TOWN_NAMES);
 	bool show_signs = HasBit(_display_opt, DO_SHOW_SIGNS) && !IsInvisibilitySet(TO_SIGNS);
 	bool show_competitors = HasBit(_display_opt, DO_SHOW_COMPETITOR_SIGNS);
+	bool show_industries = true;
 
 	/* Topmost of each type that was hit */
 	BaseStation *st = nullptr, *last_st = nullptr;
 	Town *t = nullptr, *last_t = nullptr;
 	Sign *si = nullptr, *last_si = nullptr;
+	Industry *ind = nullptr, *last_ind = nullptr;
 
 	/* See ViewportAddKdtreeSigns() for details on the search logic */
 	_viewport_sign_kdtree.FindContained(search_rect.left, search_rect.top, search_rect.right, search_rect.bottom, [&](const ViewportSignKdtreeItem & item) {
@@ -2291,6 +2318,12 @@ static bool CheckClickOnViewportSign(const Viewport *vp, int x, int y)
 				si = Sign::Get(item.id.sign);
 				if (!show_competitors && _local_company != si->owner && si->owner != OWNER_DEITY) break;
 				if (CheckClickOnViewportSign(vp, x, y, &si->sign)) last_si = si;
+				break;
+
+			case ViewportSignKdtreeItem::VKI_INDUSTRY:
+				if (!show_industries) break;
+				ind = Industry::Get(item.id.industry);
+				if (CheckClickOnViewportSign(vp, x, y, &ind->sign)) last_ind = ind;
 				break;
 
 			default:
@@ -2386,13 +2419,30 @@ ViewportSignKdtreeItem ViewportSignKdtreeItem::MakeSign(SignID id)
 	return item;
 }
 
+ViewportSignKdtreeItem ViewportSignKdtreeItem::MakeIndustry(IndustryID id)
+{
+	ViewportSignKdtreeItem item;
+	item.type = VKI_INDUSTRY;
+	item.id.industry = id;
+
+	const Industry *ind = Industry::Get(id);
+	assert(ind->sign.kdtree_valid);
+	item.center = ind->sign.center;
+	item.top = ind->sign.top;
+
+	/* Assume the sign can be a candidate for drawing, so measure its width */
+	_viewport_sign_maxwidth = std::max<int>(_viewport_sign_maxwidth, ind->sign.width_normal);
+
+	return item;
+}
+
 void RebuildViewportKdtree()
 {
 	/* Reset biggest size sign seen */
 	_viewport_sign_maxwidth = 0;
 
 	std::vector<ViewportSignKdtreeItem> items;
-	items.reserve(BaseStation::GetNumItems() + Town::GetNumItems() + Sign::GetNumItems());
+	items.reserve(BaseStation::GetNumItems() + Town::GetNumItems() + Sign::GetNumItems() + Industry::GetNumItems());
 
 	for (const Station *st : Station::Iterate()) {
 		if (st->sign.kdtree_valid) items.push_back(ViewportSignKdtreeItem::MakeStation(st->index));
@@ -2408,6 +2458,10 @@ void RebuildViewportKdtree()
 
 	for (const Sign *sign : Sign::Iterate()) {
 		if (sign->sign.kdtree_valid) items.push_back(ViewportSignKdtreeItem::MakeSign(sign->index));
+	}
+
+	for (const Industry *ind : Industry::Iterate()) {
+		if (ind->sign.kdtree_valid) items.push_back(ViewportSignKdtreeItem::MakeIndustry(ind->index));
 	}
 
 	_viewport_sign_kdtree.Build(items.begin(), items.end());

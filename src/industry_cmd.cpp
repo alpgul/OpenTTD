@@ -191,6 +191,8 @@ Industry::~Industry()
 	/* Clear the persistent storage. */
 	delete this->psa;
 
+	if (this->sign.kdtree_valid) _viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeIndustry(this->index));
+
 	DecIndustryTypeCount(this->type);
 
 	DeleteIndustryNews(this->index);
@@ -220,7 +222,11 @@ void Industry::UpdateVirtCoord()
 {
 	Point pt = RemapCoords2(TileX(this->location.tile) * TILE_SIZE, TileY(this->location.tile) * TILE_SIZE);
 
-	if (this->sign.kdtree_valid) _viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeIndustry(this->index));
+	if (this->sign.kdtree_valid) {
+		this->sign.MarkDirty();
+		_viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeIndustry(this->index));
+		this->sign.kdtree_valid = false;
+	}
 
 	uint16_t total_production = 0;
 	for (const auto &p : this->produced) {

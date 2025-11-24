@@ -1468,19 +1468,21 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 			STR_VIEWPORT_TOWN_TINY_WHITE, STR_VIEWPORT_TOWN_TINY_BLACK);
 	}
 
-	for (const auto *ind : industries) {
-		uint16_t total_production = 0;
-		for (const auto &p : ind->produced) {
-			if (!IsValidCargoID(p.cargo)) continue;
-			total_production += p.history[LAST_MONTH].production;
-		}
-		if(total_production > 0)
-		{
-			SetDParam(0, total_production);
-			SetDParam(1, ind->index);
-			ViewportAddString(dpi, ZOOM_LVL_OUT_16X, &ind->sign,
-				STR_VIEWPORT_INDUSTRY,
-				STR_VIEWPORT_INDUSTRY_TINY_WHITE, STR_VIEWPORT_INDUSTRY_TINY_BLACK);
+	if (dpi->zoom <= ZOOM_LVL_OUT_16X) {
+		for (const auto *ind : industries) {
+			uint16_t total_production = 0;
+			for (const auto &p : ind->produced) {
+				if (!IsValidCargoID(p.cargo)) continue;
+				total_production += p.history[LAST_MONTH].production;
+			}
+			if(total_production > 0)
+			{
+				SetDParam(0, total_production);
+				SetDParam(1, ind->index);
+				ViewportAddString(dpi, ZOOM_LVL_OUT_16X, &ind->sign,
+					STR_VIEWPORT_INDUSTRY,
+					STR_VIEWPORT_INDUSTRY_TINY_WHITE, STR_VIEWPORT_INDUSTRY_TINY_BLACK);
+			}
 		}
 	}
 
@@ -2260,6 +2262,8 @@ static bool CheckClickOnViewportSign(const Viewport *vp, int x, int y, const Vie
 }
 
 
+void ShowIndustryViewWindow(int industry);
+
 /**
  * Check whether any viewport sign was clicked, and dispatch the click.
  * @param vp the clicked viewport
@@ -2344,6 +2348,9 @@ static bool CheckClickOnViewportSign(const Viewport *vp, int x, int y)
 		return true;
 	} else if (last_si != nullptr) {
 		HandleClickOnSign(last_si);
+		return true;
+	} else if (last_ind != nullptr) {
+		ShowIndustryViewWindow(last_ind->index);
 		return true;
 	} else {
 		return false;

@@ -407,8 +407,16 @@ void Town::UpdateVirtCoord()
 
 	if (this->cache.sign.kdtree_valid) _viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeTown(this->index));
 
+
+	uint32_t production=0;
+	for (auto tpe : {TPE_PASSENGERS, TPE_MAIL}) {
+		for (const CargoSpec *cs : CargoSpec::town_production_cargoes[tpe]) {
+			CargoID cid = cs->Index();
+			production += this->supplied[cid].old_max;
+		}
+	}
 	SetDParam(0, this->index);
-	SetDParam(1, this->cache.population);
+	SetDParam(1, production);
 	this->cache.sign.UpdatePosition(pt.x, pt.y - 24 * ZOOM_LVL_BASE,
 		_settings_client.gui.population_in_label ? STR_VIEWPORT_TOWN_POP : STR_VIEWPORT_TOWN,
 		STR_VIEWPORT_TOWN_TINY_WHITE);
@@ -1956,6 +1964,8 @@ void UpdateTownMaxPass(Town *t)
 	for (const CargoSpec *cs : CargoSpec::town_production_cargoes[TPE_MAIL]) {
 		t->supplied[cs->Index()].old_max = ScaleByCargoScale(t->cache.population >> 4, true);
 	}
+
+	t->UpdateVirtCoord();
 }
 
 static void UpdateTownGrowthRate(Town *t);

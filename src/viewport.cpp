@@ -1462,7 +1462,14 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 
 	for (const auto *t : towns) {
 		SetDParam(0, t->index);
-		SetDParam(1, t->cache.population);
+		uint32_t production=0;
+		for (auto tpe : {TPE_PASSENGERS, TPE_MAIL}) {
+			for (const CargoSpec *cs : CargoSpec::town_production_cargoes[tpe]) {
+				CargoID cid = cs->Index();
+				production += t->supplied[cid].old_max;
+			}
+		}
+		SetDParam(1, production);
 		ViewportAddString(dpi, ZOOM_LVL_OUT_128X, &t->cache.sign,
 			_settings_client.gui.population_in_label ? STR_VIEWPORT_TOWN_POP : STR_VIEWPORT_TOWN,
 			STR_VIEWPORT_TOWN_TINY_WHITE, STR_VIEWPORT_TOWN_TINY_BLACK);
@@ -1479,7 +1486,7 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 			{
 				SetDParam(0, total_production);
 				SetDParam(1, ind->index);
-				ViewportAddString(dpi, ZOOM_LVL_OUT_16X, &ind->sign,
+				ViewportAddString(dpi, ZOOM_LVL_OUT_32X, &ind->sign,
 					STR_VIEWPORT_INDUSTRY,
 					STR_VIEWPORT_INDUSTRY_TINY_WHITE, STR_VIEWPORT_INDUSTRY_TINY_BLACK);
 			}
@@ -4127,7 +4134,9 @@ void SetViewportCatchmentStation(const Station *st, bool sel)
 {
 	SetWindowDirtyForViewportCatchment();
 	if (sel && _viewport_highlight_station != st) {
-		ClearViewportCatchment();
+		if (_viewport_highlight_town == nullptr) {
+			ClearViewportCatchment();
+		}
 		_viewport_highlight_station = st;
 		MarkCatchmentTilesDirty();
 	} else if (!sel && _viewport_highlight_station == st) {

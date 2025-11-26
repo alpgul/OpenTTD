@@ -38,6 +38,7 @@
 #include "widgets/order_widget.h"
 
 #include "safeguards.h"
+#include <cstdint>
 
 
 /** Order load types that could be given to station orders. */
@@ -247,6 +248,8 @@ void DrawOrderString(const Vehicle *v, const Order *order, int order_index, int 
 	SetDParam(5, STR_EMPTY);
 	SetDParam(8, STR_EMPTY);
 	SetDParam(9, STR_EMPTY);
+	SetDParam(10, STR_EMPTY);
+	SetDParam(11, STR_EMPTY);
 
 	/* Check range for aircraft. */
 	if (v->type == VEH_AIRCRAFT && Aircraft::From(v)->GetRange() > 0 && order->IsGotoOrder()) {
@@ -298,7 +301,17 @@ void DrawOrderString(const Vehicle *v, const Order *order, int order_index, int 
 						SetDParam(5, STR_EMPTY);
 					}
 				}
+				/* Display distance to next order. */
+				if (order->next != nullptr && order->next->IsGotoOrder()) {
+					uint distance = GetOrderDistance(order, order->next, v);
+					if (distance > 0) {
+						SetDParam(10, STR_ORDER_DISTANCE);
+						SetDParam(11, distance);
+					}
+				}
 			}
+
+			
 			break;
 		}
 

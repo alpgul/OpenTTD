@@ -1482,7 +1482,7 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 				if (!IsValidCargoID(p.cargo)) continue;
 				total_production += p.history[LAST_MONTH].production;
 			}
-			if(total_production > 0)
+			if(total_production > 99)
 			{
 				SetDParam(0, total_production);
 				SetDParam(1, ind->index);

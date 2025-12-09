@@ -1475,14 +1475,14 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 			STR_VIEWPORT_TOWN_TINY_WHITE, STR_VIEWPORT_TOWN_TINY_BLACK);
 	}
 
-	if (dpi->zoom <= ZOOM_LVL_OUT_16X) {
+	if (dpi->zoom <= ZOOM_LVL_OUT_64X) {
 		for (const auto *ind : industries) {
 			uint16_t total_production = 0;
 			for (const auto &p : ind->produced) {
 				if (!IsValidCargoID(p.cargo)) continue;
 				total_production += p.history[LAST_MONTH].production;
 			}
-			if(total_production > 99)
+			if(total_production >= 70)
 			{
 				SetDParam(0, total_production);
 				SetDParam(1, ind->index);

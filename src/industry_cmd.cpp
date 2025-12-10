@@ -233,7 +233,7 @@ void Industry::UpdateVirtCoord()
 		if (!IsValidCargoID(p.cargo)) continue;
 		total_production += p.history[LAST_MONTH].production;
 	}
-	if(total_production > 99)
+	if(total_production >= 70)
 	{
 		SetDParam(0,total_production);
 		SetDParam(1, this->index);

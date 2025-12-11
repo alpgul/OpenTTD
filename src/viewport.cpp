@@ -100,6 +100,7 @@
 
 #include "table/strings.h"
 #include "table/string_colours.h"
+#include "table/build_industry.h"
 
 #include "safeguards.h"
 
@@ -1477,6 +1478,9 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 
 	if (dpi->zoom <= ZOOM_LVL_OUT_64X) {
 		for (const auto *ind : industries) {
+			// Skip farm industries
+			if (ind->type == IT_FARM || ind->type == IT_FARM_2) continue;
+			
 			uint16_t total_production = 0;
 			for (const auto &p : ind->produced) {
 				if (!IsValidCargoID(p.cargo)) continue;

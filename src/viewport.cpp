@@ -104,6 +104,7 @@
 
 #include "table/strings.h"
 #include "table/string_colours.h"
+#include "table/build_industry.h"
 
 #include "safeguards.h"
 
@@ -1446,12 +1447,14 @@ static void ViewportAddIndustryStrings(DrawPixelInfo *dpi, const std::vector<con
 	StringID stringid_industry = STR_VIEWPORT_INDUSTRY;
 
 	for (const Industry *i : industries) {
+		// Skip farm industries
+			if (i->type == IT_FARM || i->type == IT_FARM_2) continue;
 		uint16_t total_production = 0;
 		for (const auto &p : i->produced) {
 			if (!IsValidCargoType(p.cargo)) continue;
 			total_production += p.history[LAST_MONTH].production;
 		}
-		if(total_production > 70)
+		if(total_production >= 70)
 		{
 			std::string *str = ViewportAddString(dpi, &i->sign, flags, INVALID_COLOUR);
 			if (str == nullptr) continue;

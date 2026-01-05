@@ -41,6 +41,7 @@
 #include "table/strings.h"
 
 #include "safeguards.h"
+#include <cstdint>
 
 
 /** Order load types that could be given to station orders. */
@@ -286,6 +287,12 @@ void DrawOrderString(const Vehicle *v, const Order *order, VehicleOrderID order_
 					if (order->GetStopLocation() != _settings_client.gui.stop_location) {
 						line += GetString(STR_ORDER_STOP_LOCATION_NEAR_END + to_underlying(order->GetStopLocation()));
 					}
+				}
+					/* Display distance to next order. */
+				if (GetOrderDistance(order_index, v->orders->GetNext(order_index), v) > 0) {
+					uint distance = GetOrderDistance(order_index, v->orders->GetNext(order_index), v);
+					line += GetString(STR_ORDER_DISTANCE, distance);
+					
 				}
 			}
 			break;

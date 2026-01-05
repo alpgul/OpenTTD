@@ -235,7 +235,11 @@ void Industry::UpdateVirtCoord()
 		_viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeIndustry(this->index));
 		this->sign.kdtree_valid = false;
 	}
-
+	// Skip farm industries
+	if (this->type == IT_FARM || this->type == IT_FARM_2) {
+		SetWindowDirty(WC_INDUSTRY_VIEW, this->index);
+		return;
+	}
 	uint16_t total_production = 0;
 	for (const auto &p : this->produced) {
 		if (!IsValidCargoType(p.cargo)) continue;

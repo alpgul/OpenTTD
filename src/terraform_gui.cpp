@@ -7,6 +7,7 @@
 
 /** @file terraform_gui.cpp GUI related to terraforming the map. */
 
+#include "gfx_func.h"
 #include "stdafx.h"
 #include "core/backup_type.hpp"
 #include "clear_map.h"
@@ -14,6 +15,7 @@
 #include "company_base.h"
 #include "house.h"
 #include "gui.h"
+#include "tile_type.h"
 #include "window_gui.h"
 #include "window_func.h"
 #include "viewport_func.h"
@@ -157,6 +159,10 @@ void PlaceProc_DemolishArea(TileIndex tile)
 struct TerraformToolbarWindow : Window {
 	WidgetID last_user_action = INVALID_WIDGET; ///< Last started user action.
 
+	TileIndex last_start_tile=INVALID_TILE; ///< Last start tile.
+	TileIndex last_end_tile=INVALID_TILE; ///< Last end tile.
+	bool last_ctrl_pressed=false; ///< Last ctrl pressed.
+
 	TerraformToolbarWindow(WindowDesc &desc, WindowNumber window_number) : Window(desc)
 	{
 		/* This is needed as we like to have the tree available on OnInit. */
@@ -271,7 +277,17 @@ struct TerraformToolbarWindow : Window {
 				case DDSP_RAISE_AND_LEVEL_AREA:
 				case DDSP_LOWER_AND_LEVEL_AREA:
 				case DDSP_LEVEL_AREA:
-					GUIPlaceProcDragXY(select_proc, start_tile, end_tile);
+					if (_shift_pressed && this->last_start_tile != INVALID_TILE && this->last_end_tile != INVALID_TILE){
+						_ctrl_pressed=this->last_ctrl_pressed;
+						_shift_pressed=false;
+						GUIPlaceProcDragXY(select_proc, this->last_start_tile, this->last_end_tile);
+					}
+					else{
+						this->last_ctrl_pressed=_ctrl_pressed;
+						this->last_start_tile=start_tile;
+						this->last_end_tile=end_tile;
+						GUIPlaceProcDragXY(select_proc, start_tile, end_tile);
+					}
 					break;
 				case DDSP_BUILD_OBJECT:
 					if (!_settings_game.construction.freeform_edges) {

@@ -61,6 +61,7 @@
  */
 
 #include "cargo_type.h"
+#include "misc/history_type.hpp"
 #include "stdafx.h"
 #include "core/backup_type.hpp"
 #include "core/math_func.hpp"
@@ -1418,13 +1419,22 @@ static void ViewportAddTownStrings(DrawPixelInfo *dpi, const std::vector<const T
 	}
 
 	for (const Town *t : towns) {
+			uint32_t production=0;
+	for (auto tpe : {TPE_PASSENGERS, TPE_MAIL}) {
+		for (const CargoSpec *cs : CargoSpec::town_production_cargoes[tpe]) {
+			CargoType cid = cs->Index();
+			auto it = t->GetCargoSupplied(cid);
+			if(it == std::end(t->supplied)) continue;
+			production += it->history[LAST_MONTH].production;
+		}
+	}
 		std::string *str = ViewportAddString(dpi, &t->cache.sign, flags, INVALID_COLOUR);
 		if (str == nullptr) continue;
 
 		if (t->larger_town) {
-			*str = GetString(stringid_town_city, t->index, t->cache.population);
+			*str = GetString(stringid_town_city, t->index, production);
 		} else {
-			*str = GetString(stringid_town, t->index, t->cache.population);
+			*str = GetString(stringid_town, t->index, production);
 		}
 	}
 }
@@ -1580,12 +1590,12 @@ static void ViewportAddKdtreeSigns(DrawPixelInfo *dpi)
 	});
 
 	/* Small versions of signs are used zoom level 4X and higher. */
-	bool small = dpi->zoom >= ZoomLevel::Out4x;
+	bool small = dpi->zoom >= ZoomLevel::Out8x;
 
 	/* Layering order (bottom to top): Town names, industry signs, stations */
 	ViewportAddTownStrings(dpi, towns, small);
 
-	if(dpi->zoom <= ZoomLevel::Out8x)
+	if(dpi->zoom <= ZoomLevel::Out16x)
 		ViewportAddIndustryStrings(dpi, industries, small);
 
 	/* Do not draw signs nor station names if they are set invisible */
@@ -4253,7 +4263,9 @@ void SetViewportCatchmentStation(const Station *st, bool sel)
 	SetWindowDirtyForViewportCatchment();
 	/* Mark tiles dirty for redrawing and update selected station if a different station is already highlighted. */
 	if (sel && _viewport_highlight_station != st) {
-		ClearViewportCatchment();
+		if (_viewport_highlight_town == nullptr) {
+			ClearViewportCatchment();
+		}
 		_viewport_highlight_station = st;
 		MarkCatchmentTilesDirty();
 	/* Mark tiles dirty for redrawing and clear station selection if deselecting highlight. */

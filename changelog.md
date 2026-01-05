@@ -1,6 +1,6 @@
 ## 15.x
 
-### 15.0-RC1 (2025-12-07)
+### 15.0 (2025-12-07)
 
 - Feature: Automatically load extra fonts for missing glyphs (#13303, #14856)
 - Feature: Rivers can end in wetlands if unable to reach sea (#14784, #14846)

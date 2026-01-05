@@ -27,7 +27,11 @@ enum class ZoomLevel : int8_t {
 	Out2x, ///< Zoomed 2 times out.
 	Out4x, ///< Zoomed 4 times out.
 	Out8x, ///< Zoomed 8 times out.
-	Max = Out8x, ///< Maximum zoom level.
+	Out16x, ///< Zoomed 16 times out.
+	Out32x, ///< Zoomed 32 times out.
+	Out64x, ///< Zoomed 64 times out.
+	Out128x, ///< Zoomed 128 times out.
+	Max = Out128x, ///< Maximum zoom level.
 	End, ///< End for iteration.
 
 	/* Here we define in which zoom viewports are */

@@ -23,6 +23,7 @@
 #include "tunnelbridge_map.h"
 #include "road_gui.h"
 #include "tunnelbridge_cmd.h"
+#include "tilehighlight_func.h"
 
 #include "widgets/bridge_widget.h"
 
@@ -66,6 +67,8 @@ void CcBuildBridge(Commands, const CommandCost &result, TileIndex end_tile, Tile
 		DiagDirection start_direction = ReverseDiagDir(GetTunnelBridgeDirection(tile_start));
 		ConnectRoadToStructure(tile_start, start_direction);
 	}
+
+	StoreRailPlacementEndpoints(tile_start, end_tile, (TileX(tile_start) == TileX(end_tile)) ? TRACK_Y : TRACK_X, false);
 }
 
 /** Window class for handling the bridge-build GUI. */

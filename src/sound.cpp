@@ -121,7 +121,7 @@ static void StartSound(SoundID sound_id, float pan, uint volume)
 }
 
 
-static const uint8_t _vol_factor_by_zoom[] = {255, 255, 255, 190, 134, 87};
+static const uint8_t _vol_factor_by_zoom[] = {255, 255, 255, 190, 134, 87,1,1};
 static_assert(lengthof(_vol_factor_by_zoom) == to_underlying(ZoomLevel::End));
 
 static const uint8_t _sound_base_vol[] = {

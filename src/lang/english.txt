@@ -5919,6 +5919,9 @@ STR_VIEWPORT_TOWN_CITY                                          :{TOWN} {CITY_IC
 STR_VIEWPORT_TOWN_CITY_POP                                      :{TOWN} ({COMMA}) {CITY_ICON}
 STR_VIEWPORT_STATION                                            :{STATION} {STATION_FEATURES}
 
+STR_VIEWPORT_INDUSTRY                                           :{YELLOW}[{COMMA}] {INDUSTRY}
+
+
 # Simple strings to get specific types of data
 STR_COMPANY_NAME                                                :{COMPANY}
 STR_COMPANY_NAME_COMPANY_NUM                                    :{COMPANY} {COMPANY_NUM}

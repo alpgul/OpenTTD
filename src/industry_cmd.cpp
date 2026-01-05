@@ -7,6 +7,7 @@
 
 /** @file industry_cmd.cpp Handling of industry tiles. */
 
+#include "cargo_type.h"
 #include "stdafx.h"
 #include "misc/history_type.hpp"
 #include "misc/history_func.hpp"
@@ -14,7 +15,9 @@
 #include "industry.h"
 #include "station_base.h"
 #include "landscape.h"
+#include "strings_func.h"
 #include "viewport_func.h"
+#include "viewport_kdtree.h"
 #include "command_func.h"
 #include "town.h"
 #include "news_func.h"
@@ -56,6 +59,7 @@
 #include "table/build_industry.h"
 
 #include "safeguards.h"
+#include "zoom_type.h"
 
 IndustryPool _industry_pool("Industry");
 INSTANTIATE_POOL_METHODS(Industry)
@@ -192,6 +196,8 @@ Industry::~Industry()
 	/* Clear the persistent storage. */
 	delete this->psa;
 
+	if (this->sign.kdtree_valid) _viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeIndustry(this->index));
+
 	auto &industries = Industry::industries[type];
 	industries.erase(this->index);
 
@@ -219,6 +225,39 @@ void Industry::PostDestructor(size_t)
 	SetWindowDirty(WC_BUILD_INDUSTRY, 0);
 }
 
+/** Resize the sign (label) of the industry. */
+void Industry::UpdateVirtCoord()
+{
+	Point pt = RemapCoords2(TileX(this->location.tile) * TILE_SIZE, TileY(this->location.tile) * TILE_SIZE);
+
+	if (this->sign.kdtree_valid) {
+		this->sign.MarkDirty();
+		_viewport_sign_kdtree.Remove(ViewportSignKdtreeItem::MakeIndustry(this->index));
+		this->sign.kdtree_valid = false;
+	}
+
+	uint16_t total_production = 0;
+	for (const auto &p : this->produced) {
+		if (!IsValidCargoType(p.cargo)) continue;
+		total_production += p.history[LAST_MONTH].production;
+	}
+	if(total_production > 0)
+	{
+		this->sign.UpdatePosition(pt.x, pt.y - 24 * ZOOM_BASE,
+			GetString(STR_VIEWPORT_INDUSTRY,total_production,this->index));
+		_viewport_sign_kdtree.Insert(ViewportSignKdtreeItem::MakeIndustry(this->index));
+	}
+
+	SetWindowDirty(WC_INDUSTRY_VIEW, this->index);
+}
+
+/** Update the virtual coords needed to draw the industry sign for all industries. */
+void UpdateAllIndustryVirtCoords()
+{
+	for (Industry *i : Industry::Iterate()) {
+		i->UpdateVirtCoord();
+	}
+}
 
 /**
  * Return a random valid industry.
@@ -1977,6 +2016,8 @@ static void DoCreateNewIndustry(Industry *i, TileIndex tile, IndustryType type, 
 	}
 	InvalidateWindowData(WC_INDUSTRY_DIRECTORY, 0, IDIWD_FORCE_REBUILD);
 	SetWindowDirty(WC_BUILD_INDUSTRY, 0);
+
+	i->UpdateVirtCoord();
 
 	if (!_generating_world) PopulateStationsNearby(i);
 }

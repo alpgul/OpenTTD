@@ -2066,6 +2066,14 @@ STR_CONFIG_SETTING_ZOOM_LVL_NORMAL                              :Normal
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_2X                              :2x
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_4X                              :4x
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_8X                              :8x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_16X                             :16x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_32X                             :32x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_64X                             :64x
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_128X                            :128x
+
+
+
+
 
 STR_CONFIG_SETTING_SPRITE_ZOOM_MIN                              :Highest resolution sprites to use: {STRING2}
 STR_CONFIG_SETTING_SPRITE_ZOOM_MIN_HELPTEXT                     :Limit the maximum resolution to use for sprites. Limiting sprite resolution will avoid using high resolution graphics even when available. This can help keep the game appearance unified when using a mix of GRF files with and without high resolution graphics

@@ -7,6 +7,7 @@
 
 /** @file town_cmd.cpp Handling of town tiles. */
 
+#include "cargo_type.h"
 #include "stdafx.h"
 #include "misc/history_type.hpp"
 #include "misc/history_func.hpp"
@@ -407,10 +408,19 @@ void Town::UpdateVirtCoord()
 	} else {
 		town_string = GetString(_settings_client.gui.population_in_label ? STR_VIEWPORT_TOWN_POP : STR_TOWN_NAME, this->index, this->cache.population);
 	}
+	uint32_t production=0;
+	for (auto tpe : {TPE_PASSENGERS, TPE_MAIL}) {
+		for (const CargoSpec *cs : CargoSpec::town_production_cargoes[tpe]) {
+			CargoType cid = cs->Index();
+			auto it = this->GetCargoSupplied(cid);
+			if(it == std::end(this->supplied)) continue;
+			production += it->history[LAST_MONTH].production;
+		}
+	}
 
 	this->cache.sign.UpdatePosition(pt.x, pt.y - 24 * ZOOM_BASE,
 		town_string,
-		GetString(STR_TOWN_NAME, this->index, this->cache.population)
+		GetString(STR_TOWN_NAME, this->index, production)
 );
 
 	_viewport_sign_kdtree.Insert(ViewportSignKdtreeItem::MakeTown(this->index));
@@ -2017,6 +2027,7 @@ void UpdateTownMaxPass(Town *t)
 		auto &supplied = t->GetOrCreateCargoSupplied(cs->Index());
 		supplied.history[LAST_MONTH].production = production;
 	}
+	t->UpdateVirtCoord();
 }
 
 static void UpdateTownGrowthRate(Town *t);

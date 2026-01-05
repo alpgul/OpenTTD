@@ -1,0 +1,17 @@
+{
+    "clangd.arguments": [
+        "--compile-commands-dir=build",
+        "-j=1",
+        "--background-index=false",
+        "--clang-tidy=false",
+        "--completion-style=detailed",
+        "--header-insertion=iwyu",
+        "--malloc-trim",
+        "--pch-storage=memory",
+        "--limit-results=10",
+        "--limit-references=10"
+    ],
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled"
+}

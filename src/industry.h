@@ -20,6 +20,7 @@
 #include "station_base.h"
 #include "timer/timer_game_calendar.h"
 #include "timer/timer_game_economy.h"
+#include "viewport_type.h"
 
 
 typedef Pool<Industry, IndustryID, 64> IndustryPool;
@@ -122,6 +123,8 @@ struct Industry : IndustryPool::PoolItem<&_industry_pool> {
 	PartsOfSubsidy part_of_subsidy{}; ///< NOSAVE: is this industry a source/destination of a subsidy?
 	StationList stations_near{}; ///< NOSAVE: List of nearby stations.
 	mutable std::string cached_name{}; ///< NOSAVE: Cache of the resolved name of the industry
+
+	TrackedViewportSign sign; ///< Sign displayed on the industry
 
 	Owner founder = INVALID_OWNER; ///< Founder of the industry
 	TimerGameCalendar::Date construction_date{}; ///< Date of the construction of the industry
@@ -256,6 +259,8 @@ struct Industry : IndustryPool::PoolItem<&_industry_pool> {
 	static Industry *GetRandom();
 	static void PostDestructor(size_t index);
 
+	void UpdateVirtCoord();
+
 	/**
 	 * Get the count of industries for this type.
 	 * @param type IndustryType to query
@@ -279,6 +284,7 @@ private:
 	void FillCachedName() const;
 };
 
+void ShowIndustryViewWindow(IndustryID industry);
 void ClearAllIndustryCachedNames();
 
 void PlantRandomFarmField(const Industry *i);
@@ -316,6 +322,8 @@ struct IndustryBuildData {
 };
 
 extern IndustryBuildData _industry_builder;
+
+void UpdateAllIndustryVirtCoords();
 
 
 /** Special values for the industry list window for the data parameter of #InvalidateWindowData. */

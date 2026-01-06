@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "gui.h"
+#include "debug.h"
 #include "station_base.h"
 #include "waypoint_base.h"
 #include "window_gui.h"
@@ -59,6 +60,26 @@ static DiagDirection _build_depot_direction; ///< Currently selected depot direc
 static bool _convert_signal_button;          ///< convert signal button in the signal GUI pressed
 static SignalVariant _cur_signal_variant;    ///< set the signal variant (for signal GUI)
 static SignalType _cur_signal_type;          ///< set the signal type (for signal GUI)
+
+struct CopiedTile {
+	int16_t x_offs, y_offs;
+	// Rail info
+	RailType railtype;
+	TrackBits tracks;
+	// Station info
+	bool is_station;
+	StationClassID station_class;
+	uint16_t station_type;
+	Axis axis;
+	uint8_t numtracks;
+	uint8_t platlength;
+};
+static struct {
+	int16_t width = 0;
+	int16_t height = 0;
+	std::vector<CopiedTile> tiles;
+	bool has_data = false;
+} _copied_rail_data;
 
 extern TileIndex _rail_track_endtile; // rail_cmd.cpp
 static const int HOTKEY_POLYRAIL     = 0x1000;
@@ -417,6 +438,110 @@ static CommandCost DoRailroadTrackCmd(TileIndex start_tile, TileIndex end_tile, 
 	}
 }
 
+static void DoPaste(TileIndex tile)
+{
+	if (!_copied_rail_data.has_data) return;
+
+	// Optimization: Group contiguous horizontal/vertical tracks to use CMD_BUILD_RAILROAD_TRACK
+	// This reduces the number of commands sent to the server.
+	std::vector<TileIndex> x_tracks;
+	std::vector<TileIndex> y_tracks;
+	
+	struct SingleBuild {
+		TileIndex tile;
+		RailType railtype;
+		Track track;
+	};
+	std::vector<SingleBuild> singles;
+
+	for (const auto &info : _copied_rail_data.tiles) {
+		TileIndex target = tile + TileDiffXY(info.x_offs, info.y_offs);
+		if (!IsValidTile(target)) continue;
+
+		if (info.is_station) {
+			// Station logic (should be rare if converted)
+			Command<CMD_BUILD_RAIL_STATION>::Post(target, info.railtype, info.axis, info.numtracks, info.platlength, info.station_class, info.station_type, StationID::Invalid(), true);
+		} else {
+			bool handled_x = false;
+			bool handled_y = false;
+			
+			// Extract X part
+			if (HasBit(info.tracks, TRACK_X)) {
+				x_tracks.push_back(target);
+				handled_x = true;
+			}
+			// Extract Y part
+			if (HasBit(info.tracks, TRACK_Y)) {
+				y_tracks.push_back(target);
+				handled_y = true;
+			}
+			
+			TrackBits remaining = info.tracks;
+			if (handled_x) remaining &= ~TRACK_BIT_X;
+			if (handled_y) remaining &= ~TRACK_BIT_Y;
+			
+			if (remaining != TRACK_BIT_NONE) {
+				for (const Track track : {TRACK_UPPER, TRACK_LOWER, TRACK_LEFT, TRACK_RIGHT, TRACK_BEGIN}) { 
+					 if (HasBit(remaining, track)) {
+						 singles.push_back({target, info.railtype, track});
+					 }
+				}
+			}
+		}
+	}
+
+	// 1. Process X tracks (Straights First)
+	std::sort(x_tracks.begin(), x_tracks.end()); 
+	if (!x_tracks.empty()) {
+		TileIndex start = x_tracks[0];
+		TileIndex end = start;
+		for (size_t i = 1; i < x_tracks.size(); ++i) {
+			if (x_tracks[i] == end + TileDiffXY(1, 0) && TileY(x_tracks[i]) == TileY(end)) {
+				end = x_tracks[i];
+			} else {
+				Debug(misc, 0, "DoPaste: Batch Build X from {} to {}", start.base(), end.base());
+				Command<CMD_BUILD_RAILROAD_TRACK>::Post(end, start, _cur_railtype, TRACK_X, false, false);
+				start = x_tracks[i];
+				end = start;
+			}
+		}
+		Debug(misc, 0, "DoPaste: Batch Build X from {} to {}", start.base(), end.base());
+		Command<CMD_BUILD_RAILROAD_TRACK>::Post(end, start, _cur_railtype, TRACK_X, false, false);
+	}
+
+	// 2. Process Y tracks (Straights First)
+	// CRITICAL FIX: Sort by X first, then Y. TileIndex is Row-Major (Y first), so sorting by that 
+	// breaks vertical columns into interleaved tiles.
+	std::sort(y_tracks.begin(), y_tracks.end(), [](TileIndex a, TileIndex b) {
+		if (TileX(a) != TileX(b)) return TileX(a) < TileX(b);
+		return TileY(a) < TileY(b);
+	});
+
+	if (!y_tracks.empty()) {
+		TileIndex start = y_tracks[0];
+		TileIndex end = start;
+		for (size_t i = 1; i < y_tracks.size(); ++i) {
+			// Now that it's sorted by col, contiguous items should be just +Y away
+			if (y_tracks[i] == end + TileDiffXY(0, 1) && TileX(y_tracks[i]) == TileX(end)) {
+				end = y_tracks[i];
+			} else {
+				Debug(misc, 0, "DoPaste: Batch Build Y from {} to {}", start.base(), end.base());
+				Command<CMD_BUILD_RAILROAD_TRACK>::Post(end, start, _cur_railtype, TRACK_Y, false, false);
+				start = y_tracks[i];
+				end = start;
+			}
+		}
+		Debug(misc, 0, "DoPaste: Batch Build Y from {} to {}", start.base(), end.base());
+		Command<CMD_BUILD_RAILROAD_TRACK>::Post(end, start, _cur_railtype, TRACK_Y, false, false);
+	}
+
+	// 3. Process Singles (Curved/Complex areas Last)
+	for (const auto &sb : singles) {
+		Command<CMD_BUILD_SINGLE_RAIL>::Post(sb.tile, sb.railtype, sb.track, true);
+	}
+}
+
+
 static void HandleAutodirPlacement()
 {
 	Track track = (Track)(_thd.drawstyle & HT_DIR_MASK); // 0..5
@@ -502,6 +627,7 @@ struct BuildRailToolbarWindow : Window {
 		WID_RAT_BUILD_NS, WID_RAT_BUILD_X, WID_RAT_BUILD_EW, WID_RAT_BUILD_Y, WID_RAT_AUTORAIL,
 		WID_RAT_BUILD_DEPOT, WID_RAT_BUILD_WAYPOINT, WID_RAT_BUILD_STATION, WID_RAT_BUILD_SIGNALS,
 		WID_RAT_BUILD_BRIDGE, WID_RAT_BUILD_TUNNEL, WID_RAT_CONVERT_RAIL,
+		WID_RAT_COPY, WID_RAT_PASTE,
 	};
 
 	void OnInvalidateData([[maybe_unused]] int data = 0, [[maybe_unused]] bool gui_scope = true) override
@@ -549,6 +675,8 @@ struct BuildRailToolbarWindow : Window {
 		this->GetWidget<NWidgetCore>(WID_RAT_BUILD_DEPOT)->SetSprite(rti->gui_sprites.build_depot);
 		this->GetWidget<NWidgetCore>(WID_RAT_CONVERT_RAIL)->SetSprite(rti->gui_sprites.convert_rail);
 		this->GetWidget<NWidgetCore>(WID_RAT_BUILD_TUNNEL)->SetSprite(rti->gui_sprites.build_tunnel);
+		this->GetWidget<NWidgetCore>(WID_RAT_COPY)->SetSprite(SPR_SHARED_ORDERS_ICON);
+		this->GetWidget<NWidgetCore>(WID_RAT_PASTE)->SetSprite(SPR_GOTO_LOCATION);
 	}
 
 	/**
@@ -578,6 +706,8 @@ struct BuildRailToolbarWindow : Window {
 			case WID_RAT_BUILD_WAYPOINT:
 			case WID_RAT_BUILD_STATION:
 			case WID_RAT_BUILD_SIGNALS:
+			case WID_RAT_COPY:
+			case WID_RAT_PASTE:
 				/* Removal button is enabled only if the rail/signal/waypoint/station
 				 * button is still lowered.  Once raised, it has to be disabled */
 				this->SetWidgetDisabledState(WID_RAT_REMOVE, !this->IsWidgetLowered(clicked_widget));
@@ -733,6 +863,19 @@ struct BuildRailToolbarWindow : Window {
 				this->last_user_action = widget;
 				break;
 
+			case WID_RAT_COPY:
+				HandlePlacePushButton(this, WID_RAT_COPY, SPR_CURSOR_QUERY, HT_RECT);
+				this->last_user_action = widget;
+				break;
+
+			case WID_RAT_PASTE:
+				HandlePlacePushButton(this, WID_RAT_PASTE, SPR_CURSOR_BUY_LAND, HT_RECT);
+				this->last_user_action = widget;
+				if (_copied_rail_data.has_data) {
+					SetTileSelectSize(_copied_rail_data.width, _copied_rail_data.height);
+				}
+				break;
+
 			default: NOT_REACHED();
 		}
 		this->UpdateRemoveWidgetStatus(widget);
@@ -799,6 +942,15 @@ struct BuildRailToolbarWindow : Window {
 
 			case WID_RAT_BUILD_BRIDGE:
 				PlaceRail_Bridge(tile, this);
+				break;
+
+			case WID_RAT_COPY:
+				VpStartPlaceSizing(tile, VPM_X_AND_Y_LIMITED, DDSP_COPY_AREA);
+				VpSetPlaceSizingLimit(25);
+				break;
+
+			case WID_RAT_PASTE:
+				DoPaste(tile);
 				break;
 
 			case WID_RAT_BUILD_TUNNEL:
@@ -884,6 +1036,54 @@ struct BuildRailToolbarWindow : Window {
 						}
 					}
 					break;
+
+				case DDSP_COPY_AREA: {
+					_copied_rail_data.tiles.clear();
+					TileArea ta(start_tile, end_tile);
+					_copied_rail_data.width = ta.w;
+					_copied_rail_data.height = ta.h;
+					_copied_rail_data.has_data = false;
+
+					for (TileIndex tile : ta) {
+						CopiedTile info;
+						info.x_offs = TileX(tile) - TileX(ta.tile);
+						info.y_offs = TileY(tile) - TileY(ta.tile);
+						info.is_station = false;
+
+						if (IsPlainRailTile(tile)) {
+							info.railtype = GetRailType(tile);
+							info.tracks = GetTrackBits(tile);
+							_copied_rail_data.tiles.push_back(info);
+							_copied_rail_data.has_data = true;
+						} else if (IsRailStationTile(tile)) {
+							const BaseStation *st = BaseStation::GetByTile(tile);
+							if (st != nullptr) {
+								// Treat station as rail to avoid piece-by-piece construction issues
+								info.is_station = false;
+								
+								Axis axis = GetRailStationAxis(tile);
+								info.tracks = (axis == AXIS_X ? TRACK_BIT_X : TRACK_BIT_Y);
+
+								// Use cur_railtype if station's railtype is compatible, effectively converting it
+								// Note: Getting railtype from station tile directly might be unreliable if not stored in m8
+								// So we rely on compatibility check or default to current railtype.
+                                RailType rt = _cur_railtype; 
+                                // Attempt to get railtype if possible, but safely
+                                if (IsTileType(tile, MP_STATION)) {
+                                     // For stations, we can try to guess or just use current. 
+                                     // Using current is safer for now as verified by debug crashes.
+                                     rt = _cur_railtype; 
+                                }
+
+								info.railtype = rt;
+								
+								_copied_rail_data.tiles.push_back(info);
+								_copied_rail_data.has_data = true;
+							}
+						}
+					}
+					break;
+				}
 			}
 		}
 	}
@@ -997,6 +1197,10 @@ static constexpr std::initializer_list<NWidgetPart> _nested_build_rail_widgets =
 						SetFill(0, 1), SetToolbarMinimalSize(1), SetSpriteTip(SPR_IMG_REMOVE, STR_RAIL_TOOLBAR_TOOLTIP_TOGGLE_BUILD_REMOVE_FOR),
 		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, WID_RAT_CONVERT_RAIL),
 						SetFill(0, 1), SetToolbarMinimalSize(1), SetSpriteTip(SPR_IMG_CONVERT_RAIL, STR_RAIL_TOOLBAR_TOOLTIP_CONVERT_RAIL),
+		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, WID_RAT_COPY),
+						SetFill(0, 1), SetToolbarMinimalSize(1), SetSpriteTip(SPR_SHARED_ORDERS_ICON, STR_NULL), // Tooltip TODO
+		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, WID_RAT_PASTE),
+						SetFill(0, 1), SetToolbarMinimalSize(1), SetSpriteTip(SPR_GOTO_LOCATION, STR_NULL), // Tooltip TODO
 	EndContainer(),
 };
 

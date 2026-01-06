@@ -29,6 +29,8 @@ enum RailToolbarWidgets : WidgetID {
 	WID_RAT_BUILD_TUNNEL,   ///< Build a tunnel.
 	WID_RAT_REMOVE,         ///< Bulldozer to remove rail.
 	WID_RAT_CONVERT_RAIL,   ///< Convert other rail to this type.
+	WID_RAT_COPY,           ///< Copy rail area.
+	WID_RAT_PASTE,          ///< Paste rail area.
 };
 
 /** Widgets of the #BuildRailStationWindow class. */
